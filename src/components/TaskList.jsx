@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {motion} from "framer-motion";
 import {FaThList} from "react-icons/fa"
-import { addTask } from '../firebase/tasksController';
+import { addTask, getTasks, toggleComplete } from '../firebase/tasksController';
 
 const TaskList = ({showSettings, setShowSettings}) => {
     const [taskList, setTaskList] = useState([]);
     const [newTask, setNewTask] = useState('');
     
+    useEffect(()=> {
+        getTasks()
+            .then((tasks) => setTaskList([...tasks]))
+            .catch((e) => console.error(e));
+    }, []); 
 
     const addNewTask = () => {
         if (newTask === "") return;
@@ -22,13 +27,19 @@ const TaskList = ({showSettings, setShowSettings}) => {
     };
 
     const toggleCompletedItem = (index) => {
-        let newTaskList = taskList
-        
+        // let newTaskList = taskList
+        let task = taskList.find(t => t.id === index)
         //Actualizar en la base de datos el estado de la tarea
-
+        toggleComplete(task)
+            .then(async () => {
+                //Cuando se haya añadido -> mostraremos dentro del estado taskList
+                const newTaskList = await getTasks();
+                return setTaskList([...taskList, {...newTaskList}]);
+            })
+            .catch(e => console.error(e))
         //Cuando se haya actualizado -> mostraremos todas las tareas estado taskList
-        newTaskList[index].completed = !newTaskList[index].completed;
-        setTaskList(newTaskList);
+        // newTaskList[index].completed = !newTaskList[index].completed;
+        // setTaskList(newTaskList);
     };
 
     const handleInputChange = (event) => {
@@ -83,7 +94,7 @@ const TaskList = ({showSettings, setShowSettings}) => {
                                 <label>
                                     <input
                                         type="checkbox"
-                                        onChange={() => toggleCompletedItem(index)}
+                                        onChange={() => toggleCompletedItem(item.id)}
                                         checked={item.completed}
                                     />
                                     <span className={`ml-2 text-gray-800 dark:text-gray-100 text-sm static ${item.completed && "line-through"} `} >{item.task}</span> 
